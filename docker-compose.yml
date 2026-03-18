@@ -1,0 +1,40 @@
+# https://docs.docker.com/compose/compose-file
+name: postgresql-modern
+
+services:
+  postgres:
+    image: postgres:18-bookworm
+    #    image: rbehzadan/postgres:17.6
+    restart: unless-stopped
+    environment:
+      - POSTGRES_HOST=postgresql-modern
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgresql-modern
+    ports:
+      - "5432:5432"
+    volumes:
+      - ~/dbdata/postgresql/postgresql-modern:/var/lib/postgresql
+      - ./data/:/data/
+    networks:
+      - postgres-network
+    deploy:
+      restart_policy:
+        condition: on-failure
+        delay: 3s
+        max_attempts: 3
+        window: 60s
+      resources:
+        limits:
+          cpus: 2
+          memory: 1024M
+        reservations:
+          cpus: 1
+          memory: 256M
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+networks:
+  postgres-network:
