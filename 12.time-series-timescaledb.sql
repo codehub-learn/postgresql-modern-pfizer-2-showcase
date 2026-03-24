@@ -179,7 +179,7 @@ ORDER BY events DESC;
 
 SELECT date_trunc('hour', ts) AS hour_bucket,
        avg(cpu_usage)         AS avg_cpu
-FROM sensor_metrics
+FROM sensor_metrics_ht
 WHERE ts >= now() - interval '2 months 20 days'
 GROUP BY hour_bucket
 ORDER BY hour_bucket;
@@ -194,7 +194,7 @@ ORDER BY hour_bucket;
 SELECT sensor_id,
        count(*)       AS events,
        avg(cpu_usage) AS avg_cpu
-FROM sensor_metrics
+FROM sensor_metrics_ht
 WHERE ts >= now() - interval '2 months 20 days'
 GROUP BY sensor_id
 ORDER BY avg_cpu DESC
@@ -208,7 +208,7 @@ LIMIT 10;
 -- =====================================================
 
 SELECT *
-FROM sensor_metrics
+FROM sensor_metrics_ht
 WHERE status = 'FAIL'
   AND ts >= now() - interval '2 months 20 days';
 
@@ -222,7 +222,7 @@ WHERE status = 'FAIL'
 SELECT s.city,
        count(*)         AS total_events,
        avg(m.cpu_usage) AS avg_cpu
-FROM sensor_metrics m
+FROM sensor_metrics_ht m
          JOIN sensors s ON s.sensor_id = m.sensor_id
 WHERE m.ts >= now() - interval '2 months'
 GROUP BY s.city
@@ -242,5 +242,5 @@ SELECT sensor_id,
            ORDER BY ts
            RANGE BETWEEN INTERVAL '5 minutes' PRECEDING AND CURRENT ROW
            ) AS moving_avg_cpu
-FROM sensor_metrics
+FROM sensor_metrics_ht
 WHERE ts >= now() - interval '1 day';
