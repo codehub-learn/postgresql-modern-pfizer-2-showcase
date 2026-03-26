@@ -246,7 +246,9 @@ SELECT sensor_id,
 FROM sensor_metrics_ht
 WHERE ts >= now() - interval '1 day';
 
-
+--------------------------------------------------------
+-- TIMESCALE DB Specific Functions
+--------------------------------------------------------
 -- =====================================================
 -- TIME_BUCKET (Hourly Average Temperature)
 -- Demonstrates: Basic time aggregation
@@ -341,3 +343,132 @@ GROUP BY s.sensor_name, bucket
 ORDER BY s.sensor_name, bucket;
 
 select show_chunks('sensor_metrics_ht')
+
+-- =====================================================
+-- CONTINUOUS AGGREGATE (Hourly Avg Temperature)
+-- Demonstrates: Materialized time-series view
+-- =====================================================
+
+CREATE MATERIALIZED VIEW sensor_metrics_hourly_avg
+    WITH (timescaledb.continuous) AS
+SELECT sensor_id,
+       time_bucket('1 hour', ts) AS bucket,
+       AVG(temperature)          AS avg_temp,
+       AVG(cpu_usage)            AS avg_cpu_usage
+FROM sensor_metrics_ht
+GROUP BY sensor_id, bucket;
+
+
+-- =====================================================
+-- Query Continuous Aggregate
+-- Demonstrates: Fast query (pre-aggregated data)
+-- =====================================================
+
+SELECT *
+FROM sensor_metrics_hourly_avg
+ORDER BY bucket DESC
+LIMIT 20;
+
+
+-- =====================================================
+-- REFRESH POLICY
+-- Demonstrates: Automatic background refresh
+-- start_offset: how far back to refresh
+-- end_offset: ignore most recent (still changing)
+-- =====================================================
+
+SELECT add_continuous_aggregate_policy(
+               'sensor_metrics_hourly_avg',
+               start_offset => INTERVAL '15 days',
+               end_offset => INTERVAL '1 hour',
+               schedule_interval => INTERVAL '5 minutes'
+       );
+
+
+-- =====================================================
+-- MANUAL REFRESH (for demo/testing)
+-- =====================================================
+
+CALL refresh_continuous_aggregate(
+        'sensor_metrics_hourly_avg',
+        (NOW() AT TIME ZONE 'UTC')::timestamp - INTERVAL '1 day',
+        (NOW() AT TIME ZONE 'UTC')::timestamp
+     );
+
+
+-- =====================================================
+-- DAILY AGGREGATE ON TOP OF HOURLY
+-- Demonstrates: Hierarchical aggregation (very powerful)
+-- =====================================================
+
+CREATE MATERIALIZED VIEW sensor_daily_avg
+    WITH (timescaledb.continuous) AS
+SELECT sensor_id,
+       time_bucket('1 day', bucket) AS day,
+       AVG(avg_temp)                AS avg_temp
+FROM sensor_metrics_hourly_avg
+GROUP BY sensor_id, day;
+
+SELECT add_continuous_aggregate_policy(
+               'sensor_daily_avg',
+               start_offset => INTERVAL '15 days',
+               end_offset => INTERVAL '1 hour',
+               schedule_interval => INTERVAL '5 minutes'
+       );
+-- =====================================================
+-- Query Daily Aggregate
+-- =====================================================
+
+SELECT *
+FROM sensor_daily_avg
+ORDER BY day DESC
+LIMIT 20;
+
+
+-- =====================================================
+-- RETENTION POLICY (Raw Data)
+-- Demonstrates: Automatically delete old data
+-- =====================================================
+
+SELECT add_retention_policy(
+               'sensor_metrics_ht',
+               INTERVAL '6 months'
+       );
+
+
+-- =====================================================
+-- RETENTION POLICY FOR AGGREGATES
+-- Demonstrates: Keep aggregates longer than raw data
+-- =====================================================
+
+SELECT add_retention_policy(
+               'sensor_metrics_hourly_avg',
+               INTERVAL '6 months'
+       );
+SELECT add_retention_policy(
+               'sensor_daily_avg',
+               INTERVAL '6 months'
+       );
+
+
+-- =====================================================
+-- COMPRESSION POLICY (Optional but Powerful)
+-- Demonstrates: Reduce storage for older data
+-- =====================================================
+
+ALTER TABLE sensor_metrics_ht
+    SET (timescaledb.compress);
+
+SELECT add_compression_policy(
+               'sensor_metrics_ht',
+               INTERVAL '3 months'
+       );
+
+
+-- =====================================================
+-- INSPECT JOBS (Background Workers)
+-- Demonstrates: View scheduled policies
+-- =====================================================
+
+SELECT *
+FROM timescaledb_information.jobs;
