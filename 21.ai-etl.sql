@@ -1,0 +1,5 @@
+-- =====================================================
+-- LOAD DATA
+-- psql -U postgres -d postgresql-modern -f movies.sql
+-- psql -U postgres -d postgresql-modern -f phrases.sql
+-- =====================================================
