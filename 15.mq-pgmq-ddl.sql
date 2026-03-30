@@ -1,3 +1,13 @@
+-- =====================================================
+-- INSTALL PG MQ extension (https://pgmq.github.io/pgmq)
+-- _
+-- Docker image ghcr.io/pgmq/pg18-pgmq:v1.10.0
+--
+-- or
+-- download pqmq.sql from https://github.com/pgmq/pgmq/blob/main/pgmq-extension/sql/pgmq.sql
+-- run it as SQL script
+-- =====================================================
+
 ------------------------------------------------------------
 -- Schema, tables, records, privileges, indexes, etc
 ------------------------------------------------------------
