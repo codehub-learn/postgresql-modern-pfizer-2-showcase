@@ -1,5 +1,8 @@
 -- =====================================================
--- Data Load
+-- LOAD DATA
+--
+-- Run commands from a query editor or from the command line:
+-- psql -U postgres -d postgresql-modern -f 18.fts-etl.sql
 -- =====================================================
 INSERT INTO omdb.movies (id, "name", description, release_date, runtime, budget, revenue, vote_average, votes_count)
 VALUES (3, 'Varjoja paratiisissa',
